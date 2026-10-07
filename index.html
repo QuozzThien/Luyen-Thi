@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Luyện Thi Trắc Nghiệm THPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header Navigation -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('student-home')">
+                <i class="fa-solid fa-graduation-cap text-2xl text-yellow-300"></i>
+                <h1 class="text-xl font-bold tracking-wide">AZOTA - ÔN THI TRẮC NGHIỆM</h1>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <span id="role-badge" class="bg-indigo-800 text-xs px-2.5 py-1 rounded-full text-indigo-200 border border-indigo-500">
+                    <i class="fa-solid fa-user-graduate mr-1"></i> Chế độ: Học Sinh
+                </span>
+                <button id="admin-toggle-btn" onclick="openAdminAuthModal()" class="bg-yellow-400 hover:bg-yellow-500 text-indigo-950 font-semibold text-xs px-3 py-1.5 rounded transition shadow-sm">
+                    <i class="fa-solid fa-lock mr-1"></i> Quản Trị Viên
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4">
+
+        <!-- VIEW 1: STUDENT HOME (Chọn môn & Dạng bài) -->
+        <section id="view-student-home" class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-2"><i class="fa-solid fa-book-open text-indigo-600 mr-2"></i>Chọn Môn Học</h2>
+                <p class="text-sm text-slate-500 mb-4">Vui lòng chọn môn học để xem danh sách dạng bài và mã đề thi.</p>
+                
+                <div id="subject-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                    <!-- Danh sách môn học được tự động sinh bởi JS -->
+                </div>
+            </div>
+
+            <!-- Danh sách đề thi của môn đã chọn -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-800" id="selected-subject-title">
+                        <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>Danh Sách Đề Thi
+                    </h3>
+                    <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md" id="exam-count">0 bài thi</span>
+                </div>
+
+                <div id="exam-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Danh sách mã đề thi -->
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: EXAM TAKING (Làm bài thi giống Azota) -->
+        <section id="view-exam-taking" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Cột trái: Nội dung câu hỏi -->
+                <div class="lg:col-span-3 space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-indigo-900" id="taking-exam-title">Đề Thi Toán - Mã Đề 101</h2>
+                            <p class="text-xs text-slate-500" id="taking-exam-info">Số câu: 40 | Thời gian: 50 phút</p>
+                        </div>
+                        <button onclick="confirmSubmitExam()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg shadow transition">
+                            <i class="fa-solid fa-paper-plane mr-1.5"></i> Nộp Bài
+                        </button>
+                    </div>
+
+                    <!-- Khung hiển thị câu hỏi -->
+                    <div id="questions-container" class="space-y-6 max-h-[calc(100vh-220px)] overflow-y-auto pr-2 custom-scrollbar">
+                        <!-- Danh sách câu hỏi render ở đây -->
+                    </div>
+                </div>
+
+                <!-- Cột phải: Phiếu trả lời & Đồng hồ Azota -->
+                <div class="lg:col-span-1 space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 sticky top-20">
+                        <div class="text-center pb-3 border-b border-slate-100 mb-3">
+                            <span class="text-xs text-slate-500 font-semibold uppercase">Thời Gian Còn Lại</span>
+                            <div class="text-3xl font-extrabold text-red-600 mt-1" id="timer-display">50:00</div>
+                        </div>
+
+                        <h4 class="font-bold text-sm text-slate-700 mb-2">Phiếu Bắt Đầu Làm Bài:</h4>
+                        <div id="answer-matrix" class="grid grid-cols-5 gap-2 max-h-[300px] overflow-y-auto p-1 custom-scrollbar">
+                            <!-- Các ô câu hỏi (1, 2, 3...) -->
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-xs space-y-1.5 text-slate-600">
+                            <div class="flex items-center"><span class="w-3 h-3 bg-indigo-600 rounded-full inline-block mr-2"></span> Đã trả lời</div>
+                            <div class="flex items-center"><span class="w-3 h-3 border border-slate-300 rounded-full inline-block mr-2"></span> Chưa trả lời</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: EXAM RESULT (Chấm điểm Azota) -->
+        <section id="view-exam-result" class="hidden max-w-3xl mx-auto space-y-6">
+            <div class="bg-white p-8 rounded-xl shadow-md border border-slate-200 text-center space-y-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full text-3xl">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Kết Quả Làm Bài</h2>
+                
+                <div class="grid grid-cols-3 gap-4 py-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <div>
+                        <p class="text-xs text-slate-500">Điểm Số</p>
+                        <p class="text-3xl font-black text-indigo-600" id="result-score">0.0</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">Số Câu Đúng</p>
+                        <p class="text-3xl font-black text-emerald-600" id="result-correct">0/0</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">Thời Gian</p>
+                        <p class="text-3xl font-black text-slate-700" id="result-time">00:00</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-center space-x-3 pt-2">
+                    <button onclick="switchView('student-home')" class="bg-indigo-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition">
+                        <i class="fa-solid fa-house mr-1.5"></i> Về Trang Chủ
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: ADMIN PANEL (Chỉ Admin mới dùng được) -->
+        <section id="view-admin-panel" class="hidden space-y-6">
+            <div class="bg-indigo-900 text-white p-6 rounded-xl shadow-md flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold"><i class="fa-solid fa-user-shield mr-2"></i>Bảng Điều Khiển Quản Trị Viên</h2>
+                    <p class="text-xs text-indigo-200 mt-1">Quản lý ngân hàng đề thi, thêm bớt câu hỏi, tạo mã đề & Quét đề AI Gemini.</p>
+                </div>
+                <button onclick="logoutAdmin()" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded-lg transition">
+                    Thoát Admin
+                </button>
+            </div>
+
+            <!-- Form thêm / Tạo đề thi mới -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>Thêm Đề Thi / Mã Đề Mới</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Môn Học</label>
+                        <select id="admin-subject-select" class="w-full border rounded-lg p-2 text-sm">
+                            <option value="Toán">Toán Học</option>
+                            <option value="Vật Lý">Vật Lý</option>
+                            <option value="Lịch Sử">Lịch Sử</option>
+                            <option value="Địa Lý">Địa Lý</option>
+                            <option value="KTPL">Kinh Tế & Pháp Luật</option>
+                            <option value="Tiếng Anh">Tiếng Anh</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tên Dạng Bài / Mã Đề</label>
+                        <input type="text" id="admin-exam-title" placeholder="VD: Đề Ôn Giữa Kỳ 1 - Mã 101" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Thời Gian Làm Bài (Phút)</label>
+                        <input type="number" id="admin-exam-time" value="50" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                </div>
+
+                <!-- Thêm câu hỏi thủ công hoặc nhập bằng AI -->
+                <div class="pt-4 border-t space-y-3">
+                    <h4 class="font-semibold text-sm text-slate-700">Thêm Câu Hỏi Cho Đề</h4>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="addQuickQuestion()" class="bg-slate-800 text-white text-xs px-3 py-2 rounded hover:bg-slate-700">
+                            + Thêm Câu Hỏi Thủ Công
+                        </button>
+                        <button onclick="alert('Tính năng nhập Gemini OCR/URL hoạt động khi cấu hình API Key')" class="bg-indigo-600 text-white text-xs px-3 py-2 rounded hover:bg-indigo-700">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Trích Xuất Bằng AI (URL / Ảnh)
+                        </button>
+                    </div>
+
+                    <div id="admin-questions-list" class="space-y-3 pt-2">
+                        <!-- Danh sách các câu hỏi đang biên tập -->
+                    </div>
+
+                    <button onclick="saveExamToSystem()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow transition mt-4">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Lưu Đề Thi Vào Hệ Thống
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Admin Authentication Modal -->
+    <div id="admin-auth-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-xl max-w-sm w-full space-y-4">
+            <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-lock text-indigo-600 mr-2"></i>Xác Nhận Quyền Admin</h3>
+            <p class="text-xs text-slate-500">Nhập mật khẩu quản trị viên để mở khóa các tính năng thêm/sửa/xóa đề thi.</p>
+            
+            <input type="password" id="admin-passcode-input" placeholder="Mật khẩu Admin (Mặc định: 123456)" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeAdminAuthModal()" class="bg-slate-200 text-slate-700 text-xs px-4 py-2 rounded-lg font-semibold">Hủy</button>
+                <button onclick="verifyAdminPasscode()" class="bg-indigo-600 text-white text-xs px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700">Đăng Nhập</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Handling Logic -->
+    <script>
+        // Mật khẩu Admin mặc định
+        const ADMIN_PASSCODE = "123456";
+        let isAdminLoggedIn = false;
+
+        // Cơ sở dữ liệu mẫu các Môn học & Đề thi
+        const SUBJECTS = ["Toán", "Vật Lý", "Lịch Sử", "Địa Lý", "KTPL", "Tiếng Anh"];
+        let currentSubject = "Toán";
+
+        let examDatabase = [
+            {
+                id: "exam-1",
+                subject: "Toán",
+                title: "Mã đề 101 - Khảo Sát Hàm Số",
+                duration: 50,
+                questions: [
+                    {
+                        id: 1,
+                        text: "Cho hàm số y = f(x) có bảng biến thiên... Đồ thị hàm số đạt cực đại tại điểm nào?",
+                        options: ["A. x = 1", "B. x = 2", "C. x = -1", "D. x = 0"],
+                        correct: 0
+                    },
+                    {
+                        id: 2,
+                        text: "Tính thể tích khối chóp có diện tích đáy B = 6 và chiều cao h = 3.",
+                        options: ["A. V = 18", "B. V = 6", "C. V = 9", "D. V = 54"],
+                        correct: 1
+                    }
+                ]
+            }
+        ];
+
+        let currentExam = null;
+        let studentAnswers = {};
+        let timerInterval = null;
+
+        // Khởi tạo giao diện
+        window.onload = function() {
+            renderSubjects();
+            loadExamsForSubject(currentSubject);
+        };
+
+        function switchView(viewName) {
+            document.getElementById("view-student-home").classList.add("hidden");
+            document.getElementById("view-exam-taking").classList.add("hidden");
+            document.getElementById("view-exam-result").classList.add("hidden");
+            document.getElementById("view-admin-panel").classList.add("hidden");
+
+            document.getElementById(`view-${viewName}`).classList.remove("hidden");
+        }
+
+        // --- HỌC SINH: CHỌN MÔN & ĐỀ ---
+        function renderSubjects() {
+            const grid = document.getElementById("subject-grid");
+            grid.innerHTML = SUBJECTS.map(sub => `
+                <button onclick="selectSubject('${sub}')" class="p-3 rounded-lg border ${sub === currentSubject ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'} font-bold text-sm text-center shadow-sm transition">
+                    ${sub}
+                </button>
+            `).join("");
+        }
+
+        function selectSubject(sub) {
+            currentSubject = sub;
+            renderSubjects();
+            loadExamsForSubject(sub);
+        }
+
+        function loadExamsForSubject(sub) {
+            document.getElementById("selected-subject-title").innerHTML = `<i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>Đề Thi Môn ${sub}`;
+            const listContainer = document.getElementById("exam-list");
+            const filteredExams = examDatabase.filter(e => e.subject === sub);
+            
+            document.getElementById("exam-count").innerText = `${filteredExams.length} bài thi`;
+
+            if (filteredExams.length === 0) {
+                listContainer.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400 text-sm">Chưa có đề thi nào cho môn ${sub}.</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = filteredExams.map(exam => `
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition space-y-3">
+                    <h4 class="font-bold text-indigo-900">${exam.title}</h4>
+                    <div class="text-xs text-slate-500 space-y-1">
+                        <div><i class="fa-regular fa-clock mr-1"></i>Thời gian: ${exam.duration} phút</div>
+                        <div><i class="fa-solid fa-circle-question mr-1"></i>Số câu: ${exam.questions.length} câu</div>
+                    </div>
+                    <button onclick="startExam('${exam.id}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded-lg transition">
+                        Bắt Đầu Làm Bài
+                    </button>
+                </div>
+            `).join("");
+        }
+
+        // --- LÀM BÀI THI & CHẤM ĐIỂM AZOTA ---
+        function startExam(examId) {
+            currentExam = examDatabase.find(e => e.id === examId);
+            if (!currentExam) return;
+
+            studentAnswers = {};
+            document.getElementById("taking-exam-title").innerText = currentExam.title;
+            document.getElementById("taking-exam-info").innerText = `Môn: ${currentExam.subject} | Số câu: ${currentExam.questions.length} | Thời gian: ${currentExam.duration} phút`;
+
+            renderQuestions();
+            renderAnswerMatrix();
+            startTimer(currentExam.duration * 60);
+
+            switchView("exam-taking");
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById("questions-container");
+            container.innerHTML = currentExam.questions.map((q, idx) => `
+                <div id="q-block-${idx}" class="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
+                    <p class="font-bold text-slate-800 text-sm">Câu ${idx + 1}: ${q.text}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        ${q.options.map((opt, oIdx) => `
+                            <label class="flex items-center p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                                <input type="radio" name="question-${idx}" value="${oIdx}" onchange="selectAnswer(${idx},${oIdx})" class="mr-2 text-indigo-600">
+                                <span>${opt}</span>
+                            </label>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function renderAnswerMatrix() {
+            const matrix = document.getElementById("answer-matrix");
+            matrix.innerHTML = currentExam.questions.map((_, idx) => `
+                <button id="matrix-btn-${idx}" onclick="scrollToQuestion(${idx})" class="h-9 w-full rounded border border-slate-300 font-semibold text-xs flex items-center justify-center hover:border-indigo-500 transition">
+                    ${idx + 1}
+                </button>
+            `).join("");
+        }
+
+        function selectAnswer(qIdx, optIdx) {
+            studentAnswers[qIdx] = optIdx;
+            const btn = document.getElementById(`matrix-btn-${qIdx}`);
+            if (btn) {
+                btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+            }
+        }
+
+        function scrollToQuestion(idx) {
+            const el = document.getElementById(`q-block-${idx}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function startTimer(seconds)
